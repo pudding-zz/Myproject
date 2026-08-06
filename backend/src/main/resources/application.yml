@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: website-api
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+
+ai:
+  deepseek:
+    api-key: ${DEEPSEEK_API_KEY:}
+    base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+    model: ${DEEPSEEK_MODEL:deepseek-chat}
+
+# 内容摄取层：公开上线时可关自动取纲，玩法运行层不用改
+story:
+  outline-from-title-enabled: ${STORY_OUTLINE_FROM_TITLE_ENABLED:true}

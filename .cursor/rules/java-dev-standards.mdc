@@ -1,0 +1,59 @@
+---
+description: Java/Spring 开发强制规范（摘自 Busiroom 开发规范 v1.0）
+globs: backend/**/*.java
+alwaysApply: false
+---
+
+# Java 开发规范（强制项优先）
+
+术语：**强制**必须遵守；违背需规范负责人确认。本仓库后端为 JDK 17 + Spring Boot 3。
+
+## 命名
+
+- 英文词组合；禁止拼音/拼音首字母（专有名词除外）。
+- 常量：`UPPER_SNAKE_CASE`（如 `DEFAULT_PAGE_SIZE`）。
+- 类名：`UpperCamelCase`；方法/变量：`lowerCamelCase`。
+- 领域模型加后缀：`xxVO` / `yyDAO` / `ssModel` / `zzEnum`。
+- 基类/抽象类：`Base` / `Abstract` 前缀；工厂等：`Factory` / `Builder` / `Proxy`。
+- CRUD 方法前缀统一：`list` / `get` / `count` / `create` / `delete` / `update`（列表用 `list*`，勿用 `get*` 表示列表）。
+
+## 注释与废弃
+
+- 公共接口/方法写 JavaDoc（`@param` / `@return`）。
+- 弃用类/方法：`@Deprecated` + `@see` 指向新接口。
+- 无用代码直接删除，禁止大段注释保留。
+
+## 日志与异常
+
+- 使用 `@Slf4j`（Slf4J）；禁止 `System.out` / `printStackTrace`。
+- `debug/info` 用占位符：`log.debug("userId={}", id)`，禁止字符串拼接。
+- `catch` 必须记录完整异常：`log.error("XXX 操作异常", e)`；禁止吞异常。
+- 可能失败的外部调用用 try/catch，并做业务降级或转业务异常。
+- 不要在循环体内包 try/catch；放到外层。
+
+## 空安全与比较
+
+- 可空 DB 字段用包装类型（`Integer` 非 `int`）。
+- equals：常量或已知非空对象在前：`"true".equals(x)`。
+- 禁止深层级联调用；拆开并判空。
+- 包装类型相等用 `equals`，不用 `==`。
+
+## 控制流与结构
+
+- `if/else/for/while` 必须加大括号。
+- 单方法建议 ≤100 行；单一职责。
+- 写一致性逻辑：`@Transactional(rollbackFor = Exception.class)`。
+
+## 性能底线
+
+- 禁止循环内执行 SQL / 调外部服务；改为批量查询。
+- 多次使用同一对象时先取局部变量，禁止重复 `getXxx()`。
+- 循环拼字符串用 `StringBuilder`（或 `StringBuffer` 若需同步）。
+- 浮点金额用 `BigDecimal`（字符串构造）；`long` 字面量用大写 `L`。
+- 集合判空优先 `isEmpty()`；需键值遍历 Map 用 `entrySet()`。
+- 避免魔法数；抽成 `static final` 常量。
+
+## 与本项目对齐
+
+- AI 调用只经 `modules.ai.AiClient`；密钥走环境变量，禁止入库。
+- 对用户文案用「剧情底本 / 原著节点 / 当前世界 / 偏离记录」，勿写「小说圣经」。
