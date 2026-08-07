@@ -29,7 +29,7 @@ public class WorldStateEntity {
     @Column(name = "story_base_id", nullable = false, unique = true)
     private Long storyBaseId;
 
-    @Column(name = "current_time", length = 128)
+    @Column(name = "world_time", length = 128)
     private String currentTime;
 
     @Column(name = "current_place", length = 128)
