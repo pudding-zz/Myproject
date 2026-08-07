@@ -11,6 +11,7 @@ public class TheaterRoundResponse {
 
     private List<TheaterLine> lines;
     private String worldSummary;
+    private String divergence;
 
     @Data
     @Builder

@@ -13,9 +13,6 @@ import com.myproject.website.modules.chat.entity.ChatMessageEntity;
 import com.myproject.website.modules.chat.entity.ChatSessionEntity;
 import com.myproject.website.modules.chat.repository.ChatMessageRepository;
 import com.myproject.website.modules.chat.repository.ChatSessionRepository;
-import com.myproject.website.modules.story.entity.CanonNodeEntity;
-import com.myproject.website.modules.story.entity.DivergenceLogEntity;
-import com.myproject.website.modules.story.repository.CanonNodeRepository;
 import com.myproject.website.modules.story.service.StoryPromptBuilder;
 import com.myproject.website.modules.story.service.StoryService;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +37,6 @@ public class ChatService {
     private final CharacterService characterService;
     private final StoryService storyService;
     private final StoryPromptBuilder storyPromptBuilder;
-    private final CanonNodeRepository canonNodeRepository;
     private final AiClient aiClient;
 
     @Transactional
@@ -102,13 +98,22 @@ public class ChatService {
         chatMessageRepository.save(userMessage);
 
         String storyContext = storyService.buildStoryContext(storyBaseId);
-        String system = storyPromptBuilder.buildCharacterSystemPrompt(character, storyContext);
+        String system = storyPromptBuilder.buildPlayerPerspectiveSystemPrompt(character, storyContext);
 
         List<AiMessage> prompt = new ArrayList<>();
         prompt.add(AiMessage.system(system));
         chatMessageRepository.findByChatIdOrderByIdAsc(chatId).forEach(msg -> {
-            if ("user".equals(msg.getRole()) && msg.getId().equals(userMessage.getId()) && advance) {
-                prompt.add(AiMessage.user(storyPromptBuilder.buildAdvanceUserPrompt(content)));
+            if ("user".equals(msg.getRole()) && msg.getId().equals(userMessage.getId())) {
+                if (advance) {
+                    prompt.add(AiMessage.user(
+                            storyPromptBuilder.buildAdvanceUserPrompt(character.getName(), content)));
+                } else {
+                    prompt.add(AiMessage.user(
+                            storyPromptBuilder.buildChatUserPrompt(character.getName(), content)));
+                }
+            } else if ("user".equals(msg.getRole())) {
+                prompt.add(AiMessage.user(
+                        storyPromptBuilder.buildChatUserPrompt(character.getName(), msg.getContent())));
             } else {
                 prompt.add(new AiMessage(msg.getRole(), msg.getContent()));
             }
@@ -125,24 +130,16 @@ public class ChatService {
 
         String divergenceText = null;
         String worldSummary = null;
-        if (advance || StringUtils.hasText(parsed.divergence())) {
+        if (advance || StringUtils.hasText(parsed.divergence()) || StringUtils.hasText(parsed.worldLine())) {
             if (StringUtils.hasText(parsed.divergence()) && !"无".equals(parsed.divergence().trim())) {
-                final String divergence = parsed.divergence().trim();
-                Long nodeId = findNearestPendingNodeId(storyBaseId);
-                DivergenceLogEntity log = storyService.recordDivergence(
-                        storyBaseId, nodeId, null, divergence);
-                if (nodeId != null) {
-                    canonNodeRepository.findById(nodeId).ifPresent(node -> {
-                        node.setStatus("CHANGED");
-                        node.setChangedPlot(divergence);
-                        canonNodeRepository.save(node);
-                    });
-                }
-                divergenceText = log.getNewText();
+                StoryService.DivergenceApplyResult applied = storyService.applyDivergenceFromAi(
+                        storyBaseId, parsed.divergence().trim());
+                divergenceText = applied.newText();
             }
             if (StringUtils.hasText(parsed.worldLine())) {
                 WorldPatch patch = parseWorldLine(parsed.worldLine());
-                storyService.applyWorldUpdate(storyBaseId, patch.time(), patch.place(), patch.summary());
+                storyService.applyWorldUpdate(
+                        storyBaseId, patch.time(), patch.place(), patch.present(), patch.summary());
                 worldSummary = patch.summary();
             }
         }
@@ -153,15 +150,7 @@ public class ChatService {
         return response;
     }
 
-    private Long findNearestPendingNodeId(Long storyBaseId) {
-        return canonNodeRepository.findByStoryBaseIdOrderBySeqNoAsc(storyBaseId).stream()
-                .filter(n -> "PENDING".equals(n.getStatus()))
-                .map(CanonNodeEntity::getId)
-                .findFirst()
-                .orElse(null);
-    }
-
-    private ParsedReply parseReply(String raw) {
+    static ParsedReply parseReply(String raw) {
         String divergence = null;
         String worldLine = null;
         String content = raw == null ? "" : raw.trim();
@@ -179,9 +168,10 @@ public class ChatService {
         return new ParsedReply(content, divergence, worldLine);
     }
 
-    private WorldPatch parseWorldLine(String line) {
+    static WorldPatch parseWorldLine(String line) {
         String time = null;
         String place = null;
+        String present = null;
         String summary = null;
         for (String part : line.split(";")) {
             String[] kv = part.split("=", 2);
@@ -194,6 +184,8 @@ public class ChatService {
                 time = val;
             } else if (key.contains("地点")) {
                 place = val;
+            } else if (key.contains("在场")) {
+                present = val;
             } else if (key.contains("摘要")) {
                 summary = val;
             }
@@ -201,7 +193,7 @@ public class ChatService {
         if (summary == null) {
             summary = line;
         }
-        return new WorldPatch(time, place, summary);
+        return new WorldPatch(time, place, present, summary);
     }
 
     private ChatSessionEntity requireSession(Long chatId) {
@@ -209,9 +201,9 @@ public class ChatService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "chat not found"));
     }
 
-    private record ParsedReply(String displayContent, String divergence, String worldLine) {
+    record ParsedReply(String displayContent, String divergence, String worldLine) {
     }
 
-    private record WorldPatch(String time, String place, String summary) {
+    record WorldPatch(String time, String place, String present, String summary) {
     }
 }

@@ -38,6 +38,8 @@ export const api = {
     request(`/characters?storyBaseId=${encodeURIComponent(storyBaseId)}`),
   createCharacter: (body) =>
     request('/characters', { method: 'POST', body: JSON.stringify(body) }),
+  updateCharacter: (id, body) =>
+    request(`/characters/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
 
   createChat: (body) =>
     request('/chats', { method: 'POST', body: JSON.stringify(body) }),

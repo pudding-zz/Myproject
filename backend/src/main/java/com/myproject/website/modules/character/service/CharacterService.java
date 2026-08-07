@@ -4,6 +4,7 @@ import com.myproject.website.common.BusinessException;
 import com.myproject.website.common.ErrorCode;
 import com.myproject.website.modules.character.dto.CharacterResponse;
 import com.myproject.website.modules.character.dto.CreateCharacterRequest;
+import com.myproject.website.modules.character.dto.UpdateCharacterRequest;
 import com.myproject.website.modules.character.entity.CharacterEntity;
 import com.myproject.website.modules.character.repository.CharacterRepository;
 import com.myproject.website.modules.story.service.StoryService;
@@ -47,6 +48,22 @@ public class CharacterService {
         entity.setPersonality(request.getPersonality());
         entity.setPlayerInsert(Boolean.TRUE.equals(request.getPlayerInsert()));
         entity.setEnabled(true);
+        entity.setSystemPrompt(buildDefaultPrompt(entity));
+        characterRepository.save(entity);
+        return CharacterResponse.from(entity);
+    }
+
+    @Transactional
+    public CharacterResponse update(Long id, UpdateCharacterRequest request) {
+        CharacterEntity entity = requireEnabled(id);
+        entity.setName(request.getName().trim());
+        entity.setGender(StringUtils.hasText(request.getGender()) ? request.getGender() : entity.getGender());
+        entity.setTitle(request.getTitle());
+        entity.setSetting(request.getSetting());
+        entity.setPersonality(request.getPersonality());
+        if (request.getPlayerInsert() != null) {
+            entity.setPlayerInsert(request.getPlayerInsert());
+        }
         entity.setSystemPrompt(buildDefaultPrompt(entity));
         characterRepository.save(entity);
         return CharacterResponse.from(entity);

@@ -31,51 +31,50 @@ public class StoryDataInitializer implements ApplicationRunner {
         }
 
         StoryBaseEntity base = new StoryBaseEntity();
-        base.setTitle("示例：雨巷书店");
-        base.setAuthor("原创示例");
-        base.setBackground("现代都市。一座只在雨夜热闹的独立书店，藏着未说出口的故事。");
+        base.setTitle("斗破苍穹");
+        base.setAuthor("天蚕土豆");
+        base.setBackground(
+                "斗气大陆。乌坦城萧家少年萧炎曾是天才，后修为跌落，遭云岚宗纳兰嫣然退婚羞辱。"
+                        + "其后得药老相助重踏修炼之路，闯荡大陆。本底本为非官方粗纲，仅私人娱乐。");
         base.setStatus("CONFIRMED");
         storyBaseRepository.save(base);
 
-        saveNode(base.getId(), 1, "初遇夜", "书店门口", "陌生人躲雨推门而入，店主递上一杯热茶。");
-        saveNode(base.getId(), 2, "三日后", "二楼诗架", "两人共读同一页诗，手指几乎碰到。");
-        saveNode(base.getId(), 3, "暴雨夜", "书店打烊后", "原著中店主本应独自关门离开；客人未再出现。");
-        saveNode(base.getId(), 4, "一周后", "城市另一端", "一次偶然重逢，决定是否继续往来。");
-        saveNode(base.getId(), 5, "结局附近", "书店灯下", "原著走向：各自回到日常，留下未寄出的书签。");
+        saveNode(base.getId(), 1, "乌坦城·退婚当日", "萧家大殿",
+                "纳兰嫣然当众退婚，萧炎受辱立下三年之约。");
+        saveNode(base.getId(), 2, "退婚之后", "萧家后院/密室",
+                "药老现身，萧炎获得重新变强的契机，开始隐秘修炼。");
+        saveNode(base.getId(), 3, "家族试炼前后", "乌坦城周边",
+                "萧炎实力回升，与家族内外冲突升温，云岚宗压力仍在。");
+        saveNode(base.getId(), 4, "离开乌坦城", "乌坦城城门",
+                "萧炎告别家族，踏上更广阔的斗气大陆。");
+        saveNode(base.getId(), 5, "闯荡初期", "魔兽山脉一带",
+                "历练与奇遇，实力与名声开始积累。");
+        saveNode(base.getId(), 6, "迦南学院阶段", "迦南学院",
+                "入学院修炼、结识同伴，卷入学院内外势力纠葛。");
+        saveNode(base.getId(), 7, "云岚线转折", "云岚宗相关",
+                "与云韵/云岚宗恩怨再起，退婚旧约引发更大对峙。");
+        saveNode(base.getId(), 8, "大陆征途", "中州方向（概括）",
+                "走向更远端的大陆舞台，原著主线继续远征。");
 
         WorldStateEntity world = new WorldStateEntity();
         world.setStoryBaseId(base.getId());
-        world.setCurrentTime("初遇夜");
-        world.setCurrentPlace("书店门口");
-        world.setPresentCharacters("店主、来客");
-        world.setSummary("穿书开始。雨刚下起来，故事尚未偏离。");
+        world.setCurrentTime("乌坦城·退婚当日");
+        world.setCurrentPlace("萧家大殿");
+        world.setPresentCharacters("萧炎、纳兰嫣然、萧家众人");
+        world.setSummary("穿书开始。退婚仪式即将或正在进行，故事尚未偏离。");
         worldStateRepository.save(world);
 
-        CharacterEntity host = new CharacterEntity();
-        host.setStoryBaseId(base.getId());
-        host.setName("顾晚星");
-        host.setGender("female");
-        host.setTitle("书店店主");
-        host.setSetting("雨夜你推门进来时，她正在整理旧诗集。");
-        host.setPersonality("温柔、敏锐，话少但句句有重量。");
-        host.setPlayerInsert(false);
-        host.setSystemPrompt("你是顾晚星，独立书店店主。");
-        host.setEnabled(true);
-        characterRepository.save(host);
+        saveCharacter(base.getId(), "萧炎", "male", "萧家少年",
+                "曾是天才，如今修为跌落，正站在退婚风波中央。",
+                "隐忍、好强，受辱后不服输。", false);
+        saveCharacter(base.getId(), "纳兰嫣然", "female", "云岚宗弟子",
+                "前来萧家退婚的女子，身后是云岚宗的压力。",
+                "清傲、果决，不愿受家族联姻束缚。", false);
+        saveCharacter(base.getId(), "药老", "male", "药尘残魂",
+                "寄居戒指中的老前辈，尚未或即将与萧炎正式相遇。",
+                "睿智、毒舌，看重潜力与心性。", false);
 
-        CharacterEntity self = new CharacterEntity();
-        self.setStoryBaseId(base.getId());
-        self.setName("我");
-        self.setGender("other");
-        self.setTitle("避雨的来客");
-        self.setSetting("你因一场骤雨推开这家书店的门。");
-        self.setPersonality("好奇、克制，愿意把故事写偏一点。");
-        self.setPlayerInsert(true);
-        self.setSystemPrompt("你是玩家代入角色「我」。");
-        self.setEnabled(true);
-        characterRepository.save(self);
-
-        log.info("Seeded sample 剧情底本 and characters");
+        log.info("Seeded 《斗破苍穹》剧情底本 and characters");
     }
 
     private void saveNode(Long baseId, int seq, String time, String place, String plot) {
@@ -87,5 +86,26 @@ public class StoryDataInitializer implements ApplicationRunner {
         node.setOriginalPlot(plot);
         node.setStatus("PENDING");
         canonNodeRepository.save(node);
+    }
+
+    private void saveCharacter(
+            Long baseId,
+            String name,
+            String gender,
+            String title,
+            String setting,
+            String personality,
+            boolean playerInsert) {
+        CharacterEntity c = new CharacterEntity();
+        c.setStoryBaseId(baseId);
+        c.setName(name);
+        c.setGender(gender);
+        c.setTitle(title);
+        c.setSetting(setting);
+        c.setPersonality(personality);
+        c.setPlayerInsert(playerInsert);
+        c.setSystemPrompt("玩家可选角色「" + name + "」，选中后由玩家本人扮演。");
+        c.setEnabled(true);
+        characterRepository.save(c);
     }
 }

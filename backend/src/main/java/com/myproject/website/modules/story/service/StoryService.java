@@ -33,6 +33,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -173,7 +175,12 @@ public class StoryService {
         StoryBaseEntity base = requireBase(storyBaseId);
         List<CanonNodeEntity> nodes = canonNodeRepository.findByStoryBaseIdOrderBySeqNoAsc(storyBaseId);
         WorldStateEntity world = worldStateRepository.findByStoryBaseId(storyBaseId).orElse(null);
-        return storyPromptBuilder.buildContext(base, nodes, world);
+        List<DivergenceLogEntity> recent = divergenceLogRepository
+                .findByStoryBaseIdOrderByIdDesc(storyBaseId)
+                .stream()
+                .limit(8)
+                .toList();
+        return storyPromptBuilder.buildContext(base, nodes, world, recent);
     }
 
     @Transactional
@@ -190,8 +197,34 @@ public class StoryService {
         return divergenceLogRepository.save(log);
     }
 
+    /**
+     * 解析 AI 偏离文本：写日志、更新最近 PENDING 节点为 CHANGED 或 SKIPPED。
+     */
     @Transactional
-    public void applyWorldUpdate(Long storyBaseId, String currentTime, String currentPlace, String summary) {
+    public DivergenceApplyResult applyDivergenceFromAi(Long storyBaseId, String divergenceText) {
+        CanonNodeEntity node = canonNodeRepository.findByStoryBaseIdOrderBySeqNoAsc(storyBaseId).stream()
+                .filter(n -> "PENDING".equals(n.getStatus()))
+                .findFirst()
+                .orElse(null);
+        Long nodeId = node == null ? null : node.getId();
+        String original = node == null ? null : node.getOriginalPlot();
+        DivergenceLogEntity log = recordDivergence(storyBaseId, nodeId, original, divergenceText);
+        if (node != null) {
+            boolean skipped = looksLikeSkipped(divergenceText);
+            node.setStatus(skipped ? "SKIPPED" : "CHANGED");
+            node.setChangedPlot(divergenceText);
+            canonNodeRepository.save(node);
+        }
+        return new DivergenceApplyResult(log.getNewText(), node == null ? null : node.getStatus());
+    }
+
+    @Transactional
+    public void applyWorldUpdate(
+            Long storyBaseId,
+            String currentTime,
+            String currentPlace,
+            String presentCharacters,
+            String summary) {
         WorldStateEntity world = worldStateRepository.findByStoryBaseId(storyBaseId)
                 .orElseGet(() -> {
                     WorldStateEntity w = new WorldStateEntity();
@@ -204,10 +237,21 @@ public class StoryService {
         if (StringUtils.hasText(currentPlace)) {
             world.setCurrentPlace(currentPlace);
         }
+        if (StringUtils.hasText(presentCharacters)) {
+            world.setPresentCharacters(presentCharacters);
+        }
         if (StringUtils.hasText(summary)) {
             world.setSummary(summary);
         }
         worldStateRepository.save(world);
+    }
+
+    public record DivergenceApplyResult(String newText, String nodeStatus) {
+    }
+
+    private static boolean looksLikeSkipped(String divergence) {
+        String t = divergence == null ? "" : divergence;
+        return t.contains("跳过") || t.contains("未发生") || t.contains("没有发生") || t.contains("取消");
     }
 
     @Transactional
@@ -236,7 +280,7 @@ public class StoryService {
         if (StringUtils.hasText(request.getPlayerLine())) {
             lines.add(TheaterRoundResponse.TheaterLine.builder()
                     .characterId(null)
-                    .characterName("玩家")
+                    .characterName("玩家视角")
                     .content(request.getPlayerLine().trim())
                     .build());
         }
@@ -262,10 +306,55 @@ public class StoryService {
             transcript.append(speaker.getName()).append("：").append(content.trim()).append('\n');
         }
 
-        WorldStateEntity world = worldStateRepository.findByStoryBaseId(storyBaseId).orElse(null);
+        String settleRaw = aiClient.chat(List.of(
+                AiMessage.system("你只输出 DIVERGENCE 与 WORLD 两行，用于穿书结算。"),
+                AiMessage.user(storyPromptBuilder.buildTheaterDirectorSettlePrompt(
+                        context, transcript.toString()))));
+        String divergenceText = null;
+        String worldSummary = null;
+        Matcher d = Pattern.compile("(?m)^DIVERGENCE:\\s*(.+)$").matcher(settleRaw == null ? "" : settleRaw);
+        Matcher w = Pattern.compile("(?m)^WORLD:\\s*(.+)$").matcher(settleRaw == null ? "" : settleRaw);
+        if (d.find() && StringUtils.hasText(d.group(1)) && !"无".equals(d.group(1).trim())) {
+            divergenceText = applyDivergenceFromAi(storyBaseId, d.group(1).trim()).newText();
+        }
+        if (w.find() && StringUtils.hasText(w.group(1))) {
+            String worldLine = w.group(1).trim();
+            String time = null;
+            String place = null;
+            String present = null;
+            String summary = null;
+            for (String part : worldLine.split(";")) {
+                String[] kv = part.split("=", 2);
+                if (kv.length != 2) {
+                    continue;
+                }
+                String key = kv[0].trim();
+                String val = kv[1].trim();
+                if (key.contains("时间")) {
+                    time = val;
+                } else if (key.contains("地点")) {
+                    place = val;
+                } else if (key.contains("在场")) {
+                    present = val;
+                } else if (key.contains("摘要")) {
+                    summary = val;
+                }
+            }
+            if (summary == null) {
+                summary = worldLine;
+            }
+            applyWorldUpdate(storyBaseId, time, place, present, summary);
+            worldSummary = summary;
+        }
+        if (worldSummary == null) {
+            WorldStateEntity world = worldStateRepository.findByStoryBaseId(storyBaseId).orElse(null);
+            worldSummary = world == null ? null : world.getSummary();
+        }
+
         return TheaterRoundResponse.builder()
                 .lines(lines)
-                .worldSummary(world == null ? null : world.getSummary())
+                .worldSummary(worldSummary)
+                .divergence(divergenceText)
                 .build();
     }
 

@@ -1,6 +1,5 @@
 <script setup>
 import { ref, watch } from 'vue'
-import ChatDemo from './components/ChatDemo.vue'
 import MoonThemeToggle from './components/MoonThemeToggle.vue'
 import { themes } from './data/themes.js'
 
@@ -23,7 +22,7 @@ function cycleTheme() {
 <template>
   <div class="page" :data-theme="themeId">
     <MoonThemeToggle :theme-id="themeId" @cycle="cycleTheme" />
-    <ChatDemo :theme-id="themeId" />
+    <router-view />
   </div>
 </template>
 
