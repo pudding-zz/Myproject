@@ -18,3 +18,10 @@ ai:
 # 内容摄取层：公开上线时可关自动取纲，玩法运行层不用改
 story:
   outline-from-title-enabled: ${STORY_OUTLINE_FROM_TITLE_ENABLED:true}
+
+# 拼在 context-path=/api 之后：/api/swagger-ui.html 、/api/v3/api-docs
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
