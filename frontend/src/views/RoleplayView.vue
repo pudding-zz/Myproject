@@ -2,7 +2,6 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api/client.js'
-import '../styles/roleplay.css'
 
 const router = useRouter()
 const route = useRoute()
@@ -39,9 +38,7 @@ const placeholder = computed(
 onMounted(async () => {
   await refreshSessionList()
   const id = route.params.id
-  if (id) {
-    await openSession(Number(id))
-  }
+  if (id) await openSession(Number(id))
 })
 
 watch(
@@ -137,17 +134,13 @@ async function send() {
   if (!text || !session.value || sending.value) return
   sending.value = true
   error.value = ''
-  messages.value.push({
-    id: `tmp-${Date.now()}`,
-    role: 'user',
-    content: text,
-  })
+  messages.value.push({ id: `tmp-${Date.now()}`, role: 'user', content: text })
   draft.value = ''
   await scrollBottom()
   try {
-    const reply = await api.sendRoleplayMessage(session.value.id, text)
+    await api.sendRoleplayMessage(session.value.id, text)
     messages.value = await api.listRoleplayMessages(session.value.id)
-    if (reply) await scrollBottom()
+    await scrollBottom()
   } catch (e) {
     error.value = e.message || '发送失败'
     messages.value = await api.listRoleplayMessages(session.value.id).catch(() => messages.value)
@@ -170,59 +163,66 @@ function onKeydown(e) {
 </script>
 
 <template>
-  <div class="rp-page">
-    <nav class="rp-nav">
-      <router-link class="rp-brand" to="/">望月</router-link>
-      <div>
-        <router-link to="/">首页</router-link>
-        <router-link to="/">穿书</router-link>
-        <router-link class="active" to="/roleplay">AI角色对话</router-link>
-      </div>
-    </nav>
-
-    <div class="rp-main">
-      <header class="rp-hero">
+  <div class="demo-page">
+    <div class="demo-container">
+      <header class="demo-hero">
         <h1>AI 角色对话</h1>
         <p>给 AI 一个完整身份，也给自己一个人设，AI 会以设定回应你。</p>
       </header>
 
-      <div v-if="error" class="rp-error">{{ error }}</div>
+      <p v-if="error" class="demo-banner error">{{ error }}</p>
 
-      <div class="rp-grid">
-        <article class="rp-card">
-          <div class="rp-card-head">
-            <div class="rp-avatar ai">{{ aiInitial }}</div>
-            <h2>AI 身份</h2>
+      <section class="demo-grid-2">
+        <article class="demo-card">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px">
+            <div class="play-avatar" style="width: 40px; height: 40px">{{ aiInitial }}</div>
+            <h2 style="margin: 0">AI 身份</h2>
           </div>
-          <div class="rp-field"><label>名字</label><input v-model="form.aiName" :disabled="!!session" /></div>
-          <div class="rp-field"><label>性别</label><input v-model="form.aiGender" :disabled="!!session" /></div>
-          <div class="rp-field"><label>身份</label><input v-model="form.aiTitle" :disabled="!!session" /></div>
-          <div class="rp-field"><label>性格</label><textarea v-model="form.aiPersonality" :disabled="!!session" /></div>
-          <div class="rp-field"><label>关系</label><textarea v-model="form.aiRelation" :disabled="!!session" /></div>
+          <label class="demo-field"><span>名字</span><input v-model="form.aiName" :disabled="!!session" /></label>
+          <label class="demo-field"><span>性别</span><input v-model="form.aiGender" :disabled="!!session" /></label>
+          <label class="demo-field"><span>身份</span><input v-model="form.aiTitle" :disabled="!!session" /></label>
+          <label class="demo-field"
+            ><span>性格</span><textarea v-model="form.aiPersonality" :disabled="!!session"
+          /></label>
+          <label class="demo-field"
+            ><span>关系</span><textarea v-model="form.aiRelation" :disabled="!!session"
+          /></label>
         </article>
 
-        <article class="rp-card">
-          <div class="rp-card-head">
-            <div class="rp-avatar player">{{ playerInitial }}</div>
-            <h2>玩家身份</h2>
+        <article class="demo-card">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px">
+            <div class="play-avatar muted" style="width: 40px; height: 40px">{{ playerInitial }}</div>
+            <h2 style="margin: 0">玩家身份</h2>
           </div>
-          <div class="rp-field"><label>名字</label><input v-model="form.playerName" :disabled="!!session" /></div>
-          <div class="rp-field"><label>性别</label><input v-model="form.playerGender" :disabled="!!session" /></div>
-          <div class="rp-field"><label>身份</label><input v-model="form.playerTitle" :disabled="!!session" /></div>
-          <div class="rp-field"><label>性格</label><textarea v-model="form.playerPersonality" :disabled="!!session" /></div>
-          <div class="rp-field"><label>关系</label><textarea v-model="form.playerRelation" :disabled="!!session" /></div>
+          <label class="demo-field"
+            ><span>名字</span><input v-model="form.playerName" :disabled="!!session"
+          /></label>
+          <label class="demo-field"
+            ><span>性别</span><input v-model="form.playerGender" :disabled="!!session"
+          /></label>
+          <label class="demo-field"
+            ><span>身份</span><input v-model="form.playerTitle" :disabled="!!session"
+          /></label>
+          <label class="demo-field"
+            ><span>性格</span><textarea v-model="form.playerPersonality" :disabled="!!session"
+          /></label>
+          <label class="demo-field"
+            ><span>关系</span><textarea v-model="form.playerRelation" :disabled="!!session"
+          /></label>
         </article>
+      </section>
+
+      <div class="demo-card" style="margin-top: 16px">
+        <label class="demo-field" style="margin-bottom: 0"
+          ><span>开场场景（可选）</span
+          ><textarea v-model="form.scene" :disabled="!!session" placeholder="交代时间地点与氛围…"
+        /></label>
       </div>
 
-      <div class="rp-scene rp-card" style="margin-top: 16px">
-        <label>开场场景（可选）</label>
-        <textarea v-model="form.scene" :disabled="!!session" placeholder="交代时间地点与氛围…" />
-      </div>
-
-      <div class="rp-actions">
+      <div class="demo-actions" style="justify-content: center; margin: 22px 0">
         <button
           v-if="!session"
-          class="rp-btn primary"
+          class="demo-btn primary"
           type="button"
           :disabled="loading"
           @click="startSession"
@@ -230,81 +230,139 @@ function onKeydown(e) {
           {{ loading ? '创建中…' : '开始以设定身份对话' }}
         </button>
         <template v-else>
-          <button class="rp-btn" type="button" @click="resetToNew">新建会话</button>
-          <span class="rp-session-item meta" style="border: none; background: transparent; cursor: default">
-            当前：{{ session.title || `${session.aiName} × ${session.playerName}` }}
-          </span>
+          <button class="demo-btn" type="button" @click="resetToNew">新建会话</button>
+          <span class="demo-muted">当前：{{ session.title || `${session.aiName} × ${session.playerName}` }}</span>
         </template>
       </div>
 
-      <section v-if="session" class="rp-chat">
-        <div ref="chatLog" class="rp-chat-log">
+      <section v-if="session" class="demo-card" style="padding: 0; overflow: hidden">
+        <div ref="chatLog" class="rp-log">
           <div
             v-for="m in messages"
             :key="m.id"
-            class="rp-msg"
+            class="rp-row"
             :class="m.role === 'user' ? 'user' : 'assistant'"
           >
-            <div
-              class="rp-avatar"
-              :class="m.role === 'user' ? 'player' : 'ai'"
-              style="width: 36px; height: 36px; font-size: 0.85rem"
-            >
+            <div class="play-avatar" :class="{ muted: m.role === 'user' }">
               {{ m.role === 'user' ? playerInitial : aiInitial }}
             </div>
             <div>
-              <div v-if="m.role !== 'user'" class="rp-msg-name">{{ session.aiName }}</div>
+              <p v-if="m.role !== 'user'" class="demo-muted" style="margin: 0 0 4px; font-size: 0.75rem">
+                {{ session.aiName }}
+              </p>
               <div class="rp-bubble">{{ m.content }}</div>
             </div>
           </div>
-          <div v-if="!messages.length && !loading" class="rp-msg-name" style="align-self: center">
-            暂无消息
-          </div>
         </div>
         <div class="rp-composer">
-          <input
-            v-model="draft"
-            type="text"
-            :placeholder="placeholder"
-            :disabled="sending"
-            @keydown="onKeydown"
-          />
-          <button class="rp-btn primary" type="button" :disabled="sending || !draft.trim()" @click="send">
+          <input v-model="draft" type="text" :placeholder="placeholder" :disabled="sending" @keydown="onKeydown" />
+          <button class="demo-btn primary" type="button" :disabled="sending || !draft.trim()" @click="send">
             {{ sending ? '…' : '发送' }}
           </button>
         </div>
       </section>
 
-      <div class="rp-ext">
-        <details>
-          <summary class="rose">生理记录 <span style="font-weight: 400; font-size: 0.8rem; opacity: 0.75">即将开放</span></summary>
-          <div class="body">
-            日历式亲密/生理追踪、诊断报告等将在后续版本接入。接口已预留
+      <section class="demo-grid-2" style="margin-top: 20px">
+        <details class="demo-card">
+          <summary style="cursor: pointer; font-weight: 600; color: #9a4b5c">
+            生理记录 · 即将开放
+          </summary>
+          <p class="demo-muted" style="margin-top: 10px">
+            日历式亲密/生理追踪将在后续版本接入。接口预留
             <code>GET /api/roleplay/sessions/{id}/health</code>。
-          </div>
+          </p>
         </details>
-        <details>
-          <summary class="champ">角色状态 <span style="font-weight: 400; font-size: 0.8rem; opacity: 0.75">即将开放</span></summary>
-          <div class="body">
-            房子、宠物、亲属、伴侣、好感度等状态快照将随对话更新。接口已预留
+        <details class="demo-card">
+          <summary style="cursor: pointer; font-weight: 600; color: #8a6d4b">
+            角色状态 · 即将开放
+          </summary>
+          <p class="demo-muted" style="margin-top: 10px">
+            房子、宠物、亲属、伴侣、好感度等将随对话更新。接口预留
             <code>GET /api/roleplay/sessions/{id}/status</code>。
-          </div>
+          </p>
         </details>
-      </div>
+      </section>
 
-      <section v-if="sessions.length" class="rp-sessions">
-        <h3>最近会话</h3>
+      <section v-if="sessions.length" style="margin-top: 24px">
+        <h2 class="demo-section-title" style="margin-top: 0">最近会话</h2>
         <button
           v-for="s in sessions"
           :key="s.id"
           type="button"
-          class="rp-session-item"
+          class="demo-list-btn"
           @click="router.push(`/roleplay/${s.id}`)"
         >
-          <span>{{ s.title || `${s.aiName} × ${s.playerName}` }}</span>
-          <span class="meta">#{{ s.id }}</span>
+          <strong>{{ s.title || `${s.aiName} × ${s.playerName}` }}</strong>
+          <span>#{{ s.id }}</span>
         </button>
       </section>
     </div>
   </div>
 </template>
+
+<style scoped>
+.rp-log {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 420px;
+  overflow: auto;
+  background: #fafafa;
+}
+.rp-row {
+  display: flex;
+  gap: 10px;
+  max-width: 88%;
+}
+.rp-row.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+.rp-bubble {
+  border-radius: 16px;
+  padding: 10px 14px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.rp-row.assistant .rp-bubble {
+  background: #fff;
+  border: 1px solid var(--demo-border);
+  border-top-left-radius: 4px;
+}
+.rp-row.user .rp-bubble {
+  background: var(--demo-brand-soft);
+  border: 1px solid #c5ddd2;
+  border-top-right-radius: 4px;
+}
+.rp-composer {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--demo-border);
+  background: #fff;
+}
+.rp-composer input {
+  flex: 1;
+  border: 1px solid var(--demo-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.play-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--demo-brand);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.play-avatar.muted {
+  background: var(--demo-secondary);
+  color: var(--demo-text);
+}
+</style>

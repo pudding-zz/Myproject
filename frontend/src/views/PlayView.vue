@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api/client.js'
-import AppBrandHeader from '../components/AppBrandHeader.vue'
+import '../styles/play.css'
 
 const props = defineProps({
   id: { type: [String, Number], required: true },
@@ -228,190 +228,170 @@ async function runTheater() {
 </script>
 
 <template>
-  <section class="stage">
-    <div class="atmosphere" aria-hidden="true" />
-    <AppBrandHeader
-      :title="story ? `以角色身份穿书 · ${story.title}` : '穿书工作台'"
-      lead="选左侧角色后，你就是该角色。输入言行或点推进；AI 只演世界与其他人物。"
-    />
-    <p v-if="error" class="banner error">{{ error }}</p>
-    <p v-if="loading" class="banner">加载中…</p>
-
-    <div v-if="panel === 'play'" class="workspace">
-      <aside class="roster">
-        <div class="aside-head">
-          <p class="aside-label">{{ story?.title }}</p>
-          <button type="button" class="new-btn" @click="openCreate">新建角色</button>
+  <div class="demo-page">
+    <div class="play-shell">
+      <div class="play-head">
+        <h1>{{ story ? `以角色身份穿书 · ${story.title}` : '穿书工作台' }}</h1>
+        <div class="demo-actions">
+          <button class="demo-btn" type="button" @click="router.push('/story')">换书</button>
+          <button class="demo-btn" type="button" @click="router.push(`/story/${id}/edit`)">编辑底本</button>
         </div>
-        <ul>
-          <li v-for="c in characters" :key="c.id">
-            <button
-              type="button"
-              class="char"
-              :class="{ active: !showCreate && c.id === selectedCharacterId }"
-              @click="selectCharacter(c.id)"
-            >
-              <span class="avatar">{{ c.name.slice(0, 1) }}</span>
-              <span class="meta">
-                <span class="name-line">
-                  <span class="name">{{ c.name }}</span>
-                  <span class="gender">{{ genderLabel[c.gender] || c.gender }}</span>
-                </span>
-                <span class="setting">以 TA 身份进入{{ c.playerInsert ? ' · 原创' : '' }}</span>
-              </span>
-            </button>
-          </li>
-        </ul>
-        <div class="side-actions">
-          <button type="button" class="ghost" @click="panel = 'theater'">AI 对戏</button>
-          <button type="button" class="ghost" @click="openDivergences">偏离记录</button>
-          <button type="button" class="ghost" @click="router.push(`/story/${id}/edit`)">编辑底本</button>
-          <button type="button" class="ghost" @click="router.push('/')">换书</button>
-        </div>
-        <div v-if="story?.world" class="world-box">
-          <strong>当前世界</strong>
-          <p>{{ story.world.currentTime }} · {{ story.world.currentPlace }}</p>
-          <p v-if="story.world.presentCharacters">在场：{{ story.world.presentCharacters }}</p>
-          <p>{{ story.world.summary }}</p>
-        </div>
-        <div v-if="story?.nodes?.length" class="nodes-box">
-          <strong>原著节点</strong>
-          <ul>
-            <li v-for="n in story.nodes" :key="n.id || n.seqNo">
-              <span class="status-tag" :class="n.status">{{ statusLabel[n.status] || n.status }}</span>
-              <p>{{ n.seqNo }}. {{ n.timeLabel }} / {{ n.place }}</p>
-              <p>{{ n.changedPlot || n.originalPlot }}</p>
-            </li>
-          </ul>
-        </div>
-      </aside>
-
-      <div v-if="showCreate" class="chat">
-        <div class="chat-head">
-          <div>
-            <h2>新建角色</h2>
-            <p>创建后可选中，以该身份参与剧情。</p>
-          </div>
-        </div>
-        <form class="create-form" @submit.prevent="createCharacter">
-          <label><span>名字</span><input v-model="createForm.name" required /></label>
-          <fieldset>
-            <legend>性别</legend>
-            <label class="radio"><input v-model="createForm.gender" type="radio" value="male" />男</label>
-            <label class="radio"><input v-model="createForm.gender" type="radio" value="female" />女</label>
-            <label class="radio"><input v-model="createForm.gender" type="radio" value="other" />其他</label>
-          </fieldset>
-          <label><span>身份</span><input v-model="createForm.title" /></label>
-          <label><span>设定</span><textarea v-model="createForm.setting" rows="2" /></label>
-          <label><span>人设</span><textarea v-model="createForm.personality" rows="2" /></label>
-          <label class="radio">
-            <input v-model="createForm.playerInsert" type="checkbox" />
-            标记为原创插入角色
-          </label>
-          <div class="form-actions">
-            <button type="button" class="ghost" @click="showCreate = false">取消</button>
-            <button type="submit">创建</button>
-          </div>
-        </form>
       </div>
+      <p class="demo-muted" style="margin: 0 0 12px">
+        选左侧角色后，你就是该角色。输入言行或点推进；AI 只演世界与其他人物。
+      </p>
+      <p v-if="error" class="demo-banner error">{{ error }}</p>
+      <p v-if="loading" class="demo-banner">加载中…</p>
 
-      <div v-else-if="selectedCharacter" class="chat">
-        <div class="chat-head">
-          <div>
-            <h2>
-              你是 {{ selectedCharacter.name }}
-              <span class="gender-tag">{{ genderLabel[selectedCharacter.gender] }}</span>
-            </h2>
-            <p>{{ selectedCharacter.title }} · {{ selectedCharacter.setting }}</p>
+      <div v-if="panel === 'play'" class="play-workspace">
+        <aside class="play-aside">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
+            <p class="play-aside-label" style="margin: 0">角色名册</p>
+            <button class="demo-btn" type="button" @click="openCreate">新建</button>
           </div>
-          <button type="button" class="story-btn" :disabled="sending" @click="advance">推进剧情</button>
-        </div>
-        <div v-if="selectedCharacter.personality" class="persona">
-          <strong>人设</strong>
-          <span>{{ selectedCharacter.personality }}</span>
-        </div>
-        <div ref="listRef" class="messages">
-          <div v-for="(m, i) in messages" :key="i" class="row" :class="m.role">
-            <div class="bubble">
-              {{ m.content }}
-              <p v-if="m.divergence" class="div-note">偏离：{{ m.divergence }}</p>
-              <p v-if="m.worldSummary" class="div-note">世界：{{ m.worldSummary }}</p>
-            </div>
-          </div>
-          <div v-if="sending" class="row assistant">
-            <div class="bubble typing">世界正在回应…</div>
-          </div>
-        </div>
-        <form class="composer" @submit.prevent="send">
-          <textarea
-            v-model="draft"
-            rows="2"
-            :placeholder="`以「${selectedCharacter.name}」的身份说或做…`"
-            @keydown="onKeydown"
-          />
-          <button type="submit" :disabled="sending || !draft.trim()">发送</button>
-        </form>
-      </div>
-    </div>
-
-    <div v-else-if="panel === 'theater'" class="panel">
-      <div class="panel-head">
-        <div>
-          <h2>AI 对戏</h2>
-          <p class="muted">多角色轮流发言；结束后会结算偏离与当前世界。插话视为你当前视角角色的台词。</p>
-        </div>
-        <button type="button" class="ghost" @click="panel = 'play'">返回穿书</button>
-      </div>
-      <div class="edit-body">
-        <p class="muted">选择 2～6 个角色</p>
-        <div class="chips">
           <button
             v-for="c in characters"
             :key="c.id"
             type="button"
-            class="chip"
+            class="play-char"
+            :class="{ active: !showCreate && c.id === selectedCharacterId }"
+            @click="selectCharacter(c.id)"
+          >
+            <span class="play-avatar">{{ c.name.slice(0, 1) }}</span>
+            <span>
+              <span class="name">{{ c.name }}（{{ genderLabel[c.gender] || c.gender }}）</span>
+              <span class="sub">{{ c.title || '以 TA 身份进入' }}{{ c.playerInsert ? ' · 原创' : '' }}</span>
+            </span>
+          </button>
+
+          <div class="play-side-actions">
+            <button class="demo-btn" type="button" @click="panel = 'theater'">AI 对戏</button>
+            <button class="demo-btn" type="button" @click="openDivergences">偏离记录</button>
+          </div>
+
+          <div v-if="story?.world" class="play-world">
+            <strong>当前世界</strong>
+            <p>{{ story.world.currentTime }} · {{ story.world.currentPlace }}</p>
+            <p v-if="story.world.presentCharacters">在场：{{ story.world.presentCharacters }}</p>
+            <p>{{ story.world.summary }}</p>
+          </div>
+          <div v-if="story?.nodes?.length" class="play-world">
+            <strong>原著节点</strong>
+            <div v-for="n in story.nodes" :key="n.id || n.seqNo" style="margin-top: 8px">
+              <span class="demo-muted">{{ statusLabel[n.status] || n.status }}</span>
+              <p style="margin: 2px 0">{{ n.seqNo }}. {{ n.timeLabel }} / {{ n.place }}</p>
+              <p style="margin: 0">{{ n.changedPlot || n.originalPlot }}</p>
+            </div>
+          </div>
+        </aside>
+
+        <div v-if="showCreate" class="play-main" style="padding: 16px">
+          <h2 style="margin-top: 0">新建角色</h2>
+          <form @submit.prevent="createCharacter">
+            <label class="demo-field"><span>名字</span><input v-model="createForm.name" required /></label>
+            <label class="demo-field"
+              ><span>性别</span>
+              <select v-model="createForm.gender">
+                <option value="male">男</option>
+                <option value="female">女</option>
+                <option value="other">其他</option>
+              </select>
+            </label>
+            <label class="demo-field"><span>身份</span><input v-model="createForm.title" /></label>
+            <label class="demo-field"><span>设定</span><textarea v-model="createForm.setting" rows="2" /></label>
+            <label class="demo-field"><span>人设</span><textarea v-model="createForm.personality" rows="2" /></label>
+            <label class="demo-field" style="flex-direction: row; align-items: center; gap: 8px">
+              <input v-model="createForm.playerInsert" type="checkbox" />
+              <span>标记为原创插入角色</span>
+            </label>
+            <div class="demo-actions">
+              <button class="demo-btn" type="button" @click="showCreate = false">取消</button>
+              <button class="demo-btn primary" type="submit">创建</button>
+            </div>
+          </form>
+        </div>
+
+        <div v-else-if="selectedCharacter" class="play-main">
+          <div class="play-chat-head">
+            <div>
+              <h2>你是 {{ selectedCharacter.name }}（{{ genderLabel[selectedCharacter.gender] }}）</h2>
+              <p>{{ selectedCharacter.title }} · {{ selectedCharacter.setting }}</p>
+            </div>
+            <button class="demo-btn primary" type="button" :disabled="sending" @click="advance">推进剧情</button>
+          </div>
+          <div ref="listRef" class="play-messages">
+            <div
+              v-for="(m, i) in messages"
+              :key="i"
+              class="play-bubble-row"
+              :class="m.role === 'user' ? 'user' : 'assistant'"
+            >
+              <div class="play-bubble">
+                {{ m.content }}
+                <p v-if="m.divergence" class="play-note">偏离：{{ m.divergence }}</p>
+                <p v-if="m.worldSummary" class="play-note">世界：{{ m.worldSummary }}</p>
+              </div>
+            </div>
+            <div v-if="sending" class="play-bubble-row assistant">
+              <div class="play-bubble">世界正在回应…</div>
+            </div>
+          </div>
+          <form class="play-composer" @submit.prevent="send">
+            <textarea
+              v-model="draft"
+              rows="2"
+              :placeholder="`以「${selectedCharacter.name}」的身份说或做…`"
+              @keydown="onKeydown"
+            />
+            <button class="demo-btn primary" type="submit" :disabled="sending || !draft.trim()">发送</button>
+          </form>
+        </div>
+      </div>
+
+      <div v-else-if="panel === 'theater'" class="demo-card play-panel">
+        <div class="play-head">
+          <h1 style="font-size: 1.1rem">AI 对戏</h1>
+          <button class="demo-btn" type="button" @click="panel = 'play'">返回穿书</button>
+        </div>
+        <p class="demo-muted">选择 2～6 个角色；插话视为当前所选角色的台词。</p>
+        <div class="play-chips">
+          <button
+            v-for="c in characters"
+            :key="c.id"
+            type="button"
+            class="play-chip"
             :class="{ on: theaterSelected.includes(c.id) }"
             @click="toggleTheaterChar(c.id)"
           >
             {{ c.name }}
           </button>
         </div>
-        <label>
-          <span>玩家插话（可选，以当前所选角色视角）</span>
-          <input v-model="theaterPlayerLine" placeholder="突然插入一句…" />
-        </label>
-        <button type="button" :disabled="sending" @click="runTheater">演一轮</button>
-        <p v-if="theaterDivergence" class="div-note">偏离：{{ theaterDivergence }}</p>
-        <div v-if="story?.world" class="world-box">
-          <strong>当前世界</strong>
-          <p>{{ story.world.currentTime }} · {{ story.world.currentPlace }}</p>
-          <p>{{ story.world.summary }}</p>
-        </div>
-        <div class="theater-log">
-          <div v-for="(line, i) in theaterLines" :key="i" class="theater-line">
+        <label class="demo-field"
+          ><span>玩家插话（可选）</span
+          ><input v-model="theaterPlayerLine" placeholder="突然插入一句…"
+        /></label>
+        <button class="demo-btn primary" type="button" :disabled="sending" @click="runTheater">演一轮</button>
+        <p v-if="theaterDivergence" class="play-note">偏离：{{ theaterDivergence }}</p>
+        <div v-if="theaterLines.length" class="play-world">
+          <div v-for="(line, i) in theaterLines" :key="i" style="margin-bottom: 10px">
             <strong>{{ line.characterName }}</strong>
-            <p>{{ line.content }}</p>
+            <p style="margin: 4px 0 0">{{ line.content }}</p>
           </div>
         </div>
       </div>
-    </div>
 
-    <div v-else-if="panel === 'divergences'" class="panel">
-      <div class="panel-head">
-        <div>
-          <h2>偏离记录</h2>
-          <p class="muted">原著本应发生的事，被穿书改写成了什么。</p>
+      <div v-else-if="panel === 'divergences'" class="demo-card play-panel">
+        <div class="play-head">
+          <h1 style="font-size: 1.1rem">偏离记录</h1>
+          <button class="demo-btn" type="button" @click="panel = 'play'">返回</button>
         </div>
-        <button type="button" class="ghost" @click="panel = 'play'">返回</button>
-      </div>
-      <ul class="div-list">
-        <li v-for="d in divergences" :key="d.id">
-          <p v-if="d.originalText" class="muted">本应：{{ d.originalText }}</p>
+        <div v-for="d in divergences" :key="d.id" class="play-world" style="margin-bottom: 8px">
+          <p v-if="d.originalText" class="demo-muted">本应：{{ d.originalText }}</p>
           <p>{{ d.newText }}</p>
-          <span class="muted">{{ d.createdAt }}</span>
-        </li>
-        <li v-if="!divergences.length" class="muted">还没有偏离记录。试着点「推进剧情」。</li>
-      </ul>
+          <span class="demo-muted">{{ d.createdAt }}</span>
+        </div>
+        <p v-if="!divergences.length" class="demo-muted">还没有偏离记录。试着点「推进剧情」。</p>
+      </div>
     </div>
-  </section>
+  </div>
 </template>

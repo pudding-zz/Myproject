@@ -2,7 +2,6 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api/client.js'
-import AppBrandHeader from '../components/AppBrandHeader.vue'
 
 const props = defineProps({
   id: { type: [String, Number], required: true },
@@ -92,53 +91,56 @@ async function saveBase(confirm) {
 </script>
 
 <template>
-  <section class="stage">
-    <div class="atmosphere" aria-hidden="true" />
-    <AppBrandHeader title="编辑剧情底本" lead="请核对原著节点；不准的地方直接改。确认后才能以角色身份穿书。" />
-    <p v-if="error" class="banner error">{{ error }}</p>
-    <p v-if="loading" class="banner">加载中…</p>
+  <div class="demo-page">
+    <div class="demo-container">
+      <header class="demo-hero">
+        <h1>编辑剧情底本</h1>
+        <p>请核对原著节点；不准的地方直接改。确认后才能以角色身份穿书。</p>
+      </header>
 
-    <div class="panel">
-      <div class="panel-head">
-        <div>
-          <h2>编辑剧情底本</h2>
-          <p class="muted">确认后初始化当前世界，即可建角推进。</p>
-        </div>
-        <button type="button" class="ghost" @click="router.push('/')">返回</button>
-      </div>
-      <div class="edit-body">
-        <label>
-          <span>书名</span>
-          <input v-model="editForm.title" />
-        </label>
-        <label>
-          <span>作者</span>
-          <input v-model="editForm.author" />
-        </label>
-        <label>
-          <span>背景</span>
-          <textarea v-model="editForm.background" rows="3" />
-        </label>
+      <p v-if="error" class="demo-banner error">{{ error }}</p>
+      <p v-if="loading" class="demo-banner">加载中…</p>
 
-        <div class="nodes-head">
-          <h3>原著节点</h3>
-          <button type="button" class="ghost" @click="addNode">加节点</button>
+      <div class="demo-card">
+        <div class="demo-actions" style="margin-bottom: 16px">
+          <button class="demo-btn" type="button" @click="router.push('/story')">返回穿书</button>
         </div>
-        <div v-for="(n, idx) in editForm.nodes" :key="idx" class="node-card">
-          <div class="node-row">
+        <label class="demo-field"><span>书名</span><input v-model="editForm.title" /></label>
+        <label class="demo-field"><span>作者</span><input v-model="editForm.author" /></label>
+        <label class="demo-field"><span>背景</span><textarea v-model="editForm.background" rows="3" /></label>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px">
+          <h2 style="margin: 0; font-size: 1rem">原著节点</h2>
+          <button class="demo-btn" type="button" @click="addNode">加节点</button>
+        </div>
+
+        <div
+          v-for="(n, idx) in editForm.nodes"
+          :key="idx"
+          class="demo-card"
+          style="margin-bottom: 10px; padding: 14px; background: var(--demo-secondary)"
+        >
+          <div class="demo-row" style="margin-bottom: 8px">
             <input v-model="n.timeLabel" placeholder="时间" />
             <input v-model="n.place" placeholder="地点" />
-            <button type="button" class="ghost danger" @click="removeNode(idx)">删</button>
+            <button class="demo-btn" type="button" @click="removeNode(idx)">删</button>
           </div>
-          <textarea v-model="n.originalPlot" rows="2" placeholder="原著走向" />
-          <span class="status-tag" :class="n.status">{{ n.status || 'PENDING' }}</span>
+          <textarea
+            v-model="n.originalPlot"
+            rows="2"
+            placeholder="原著走向"
+            style="width: 100%; border: 1px solid var(--demo-border); border-radius: 10px; padding: 10px"
+          />
+          <p class="demo-muted" style="margin: 6px 0 0">状态：{{ n.status || 'PENDING' }}</p>
         </div>
 
-        <div class="form-actions">
-          <button type="button" class="ghost" :disabled="loading" @click="saveBase(false)">仅保存草稿</button>
-          <button type="button" :disabled="loading" @click="saveBase(true)">确认底本并开始</button>
+        <div class="demo-actions">
+          <button class="demo-btn" type="button" :disabled="loading" @click="saveBase(false)">仅保存草稿</button>
+          <button class="demo-btn primary" type="button" :disabled="loading" @click="saveBase(true)">
+            确认底本并开始
+          </button>
         </div>
       </div>
     </div>
-  </section>
+  </div>
 </template>
