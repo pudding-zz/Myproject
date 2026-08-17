@@ -149,6 +149,69 @@
   padding: 0 14px 14px;
 }
 
+.panel-save-error {
+  margin: 0;
+  color: #ff8a9a;
+  font-size: 0.85rem;
+}
+
+.panel-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.panel-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  opacity: 0.95;
+}
+
+.panel-field span {
+  opacity: 0.75;
+}
+
+.panel-field input,
+.panel-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.22);
+  color: inherit;
+  padding: 8px 10px;
+  font: inherit;
+  resize: vertical;
+}
+
+.health-panel .panel-field input,
+.health-panel .panel-field textarea {
+  border-color: rgba(224, 90, 122, 0.25);
+}
+
+.status-panel .panel-field input,
+.status-panel .panel-field textarea {
+  border-color: rgba(232, 212, 184, 0.22);
+}
+
+.status-save-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  cursor: pointer;
+  background: rgba(232, 212, 184, 0.18);
+  color: var(--status-champagne);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.status-save-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .status-os {
   color: var(--status-champagne);
   font-size: 0.8rem;

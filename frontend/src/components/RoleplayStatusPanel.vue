@@ -21,15 +21,38 @@ const EMPTY_SNAP = {
   access: { lines: [], os: '' },
 }
 
-const snap = ref({ ...EMPTY_SNAP, theater: { content: '', os: '' }, access: { lines: [], os: '' } })
+const DEFAULT_LIFE = [
+  { title: '进食', lines: [], os: '' },
+  { title: '睡眠', lines: [], os: '' },
+  { title: '礼物', lines: [], os: '' },
+  { title: '约定', lines: [], os: '' },
+]
+
+const snap = ref({
+  ...EMPTY_SNAP,
+  theater: { content: '', os: '' },
+  access: { lines: [], os: '' },
+})
 const fromApi = ref(false)
 const loadError = ref('')
+const saveError = ref('')
+const saving = ref(false)
+/** @type {import('vue').Ref<Record<string, { linesText: string, os: string }>>} */
+const lifeDrafts = ref({})
+
+const canEdit = computed(() => fromApi.value && !!sessionNumericId())
 
 const hint = computed(() => {
   if (loadError.value) return `加载失败：${loadError.value}（已回退演示快照）`
-  if (fromApi.value) return '会话真实状态快照'
+  if (fromApi.value) return '会话真实状态快照（生活四块可编辑）'
   return '当前为演示快照；进入会话后将拉取真实状态。'
 })
+
+function sessionNumericId() {
+  if (props.sessionId == null || props.sessionId === '') return null
+  const id = Number(props.sessionId)
+  return Number.isFinite(id) ? id : null
+}
 
 function normalizeSnap(data) {
   if (!data || typeof data !== 'object') return { ...EMPTY_SNAP }
@@ -52,12 +75,39 @@ function normalizeSnap(data) {
   }
 }
 
+function syncLifeDrafts(life) {
+  const next = {}
+  for (const b of life || []) {
+    next[b.title] = {
+      linesText: Array.isArray(b.lines) ? b.lines.join('\n') : '',
+      os: b.os || '',
+    }
+  }
+  lifeDrafts.value = next
+}
+
+function statusPayloadFromSnap(s) {
+  return {
+    blocks: s.blocks || [],
+    intimacy: s.intimacy || [],
+    life: s.life || [],
+    favorability: s.favorability || [],
+    favorOs: s.favorOs || '',
+    forum: s.forum || [],
+    theater: s.theater || { content: '', os: '' },
+    misc: s.misc || [],
+    access: s.access || { lines: [], os: '' },
+  }
+}
+
 async function load() {
   loadError.value = ''
-  const id = props.sessionId != null && props.sessionId !== '' ? Number(props.sessionId) : null
+  saveError.value = ''
+  const id = sessionNumericId()
   if (!id) {
     snap.value = buildStatusDemo(props.aiName, props.playerName)
     fromApi.value = false
+    lifeDrafts.value = {}
     return
   }
   try {
@@ -65,14 +115,17 @@ async function load() {
     if (data?.available === false) {
       snap.value = buildStatusDemo(props.aiName, props.playerName)
       fromApi.value = false
+      lifeDrafts.value = {}
       return
     }
     snap.value = normalizeSnap(data)
     fromApi.value = true
+    syncLifeDrafts(snap.value.life)
   } catch (e) {
     loadError.value = e.message || '请求失败'
     snap.value = buildStatusDemo(props.aiName, props.playerName)
     fromApi.value = false
+    lifeDrafts.value = {}
   }
 }
 
@@ -81,6 +134,58 @@ watch(
   load,
   { immediate: true },
 )
+
+async function initLife() {
+  const id = sessionNumericId()
+  if (!id || !canEdit.value || saving.value) return
+  saving.value = true
+  saveError.value = ''
+  try {
+    const payload = {
+      ...statusPayloadFromSnap(snap.value),
+      life: DEFAULT_LIFE.map((b) => ({ ...b, lines: [], os: '' })),
+    }
+    const data = await api.putRoleplayStatus(id, payload)
+    snap.value = normalizeSnap(data)
+    syncLifeDrafts(snap.value.life)
+  } catch (e) {
+    saveError.value = e.message || '初始化失败'
+  } finally {
+    saving.value = false
+  }
+}
+
+async function saveLife() {
+  const id = sessionNumericId()
+  if (!id || !canEdit.value || saving.value) return
+  saving.value = true
+  saveError.value = ''
+  try {
+    const life = (snap.value.life || []).map((b) => {
+      const d = lifeDrafts.value[b.title] || { linesText: '', os: '' }
+      const cleaned = String(d.linesText || '')
+        .split('\n')
+        .map((line) => line.trimEnd())
+        .filter((line) => line.length > 0)
+      return {
+        title: b.title,
+        lines: cleaned,
+        os: d.os || '',
+      }
+    })
+    const payload = {
+      ...statusPayloadFromSnap(snap.value),
+      life,
+    }
+    const data = await api.putRoleplayStatus(id, payload)
+    snap.value = normalizeSnap(data)
+    syncLifeDrafts(snap.value.life)
+  } catch (e) {
+    saveError.value = e.message || '保存失败'
+  } finally {
+    saving.value = false
+  }
+}
 </script>
 
 <template>
@@ -94,6 +199,7 @@ watch(
     </summary>
     <div class="panel-body">
       <p class="demo-hint">{{ hint }}</p>
+      <p v-if="saveError" class="panel-save-error">{{ saveError }}</p>
 
       <div v-if="snap.blocks.length" class="status-grid">
         <details v-for="b in snap.blocks" :key="b.title" class="status-card status-sub">
@@ -115,14 +221,38 @@ watch(
         </div>
       </details>
 
+      <div v-if="canEdit && !snap.life.length" class="health-foot">
+        <button type="button" class="status-save-btn" :disabled="saving" @click="initLife">
+          {{ saving ? '初始化中…' : '初始化进食/睡眠/礼物/约定' }}
+        </button>
+      </div>
+
       <div v-if="snap.life.length" class="status-grid">
         <details v-for="b in snap.life" :key="b.title" class="status-card status-sub">
           <summary class="status-section-title">{{ b.title }}</summary>
           <div class="status-sub-body">
-            <p v-for="(line, i) in b.lines || []" :key="i">{{ line }}</p>
-            <p v-if="b.os" class="status-os">{{ b.os }}</p>
+            <template v-if="canEdit && lifeDrafts[b.title]">
+              <label class="panel-field" style="display: block">
+                <span>内容（每行一条）</span>
+                <textarea v-model="lifeDrafts[b.title].linesText" rows="3" />
+              </label>
+              <label class="panel-field" style="display: block; margin-top: 8px">
+                <span>旁白 / OS</span>
+                <textarea v-model="lifeDrafts[b.title].os" rows="2" />
+              </label>
+            </template>
+            <template v-else>
+              <p v-for="(line, i) in b.lines || []" :key="i">{{ line }}</p>
+              <p v-if="b.os" class="status-os">{{ b.os }}</p>
+            </template>
           </div>
         </details>
+      </div>
+
+      <div v-if="canEdit && snap.life.length" class="health-foot">
+        <button type="button" class="status-save-btn" :disabled="saving" @click="saveLife">
+          {{ saving ? '保存中…' : '保存生活状态' }}
+        </button>
       </div>
 
       <details v-if="snap.favorability.length || snap.favorOs" class="status-card status-sub">
@@ -192,7 +322,7 @@ watch(
         v-if="fromApi && !snap.blocks.length && !snap.life.length && !snap.intimacy.length"
         class="demo-hint"
       >
-        状态为空骨架，可用 PUT /status 写入内容。
+        状态为空骨架；可先初始化生活四块，或用 PUT /status 写入其它内容。
       </p>
     </div>
   </details>
