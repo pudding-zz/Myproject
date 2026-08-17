@@ -266,8 +266,16 @@ function onKeydown(e) {
       </section>
 
       <section class="rp-panels" aria-label="生理记录与角色状态">
-        <RoleplayHealthPanel :ai-name="displayAiName" :player-name="displayPlayerName" />
-        <RoleplayStatusPanel :ai-name="displayAiName" :player-name="displayPlayerName" />
+        <RoleplayHealthPanel
+          :session-id="session?.id"
+          :ai-name="displayAiName"
+          :player-name="displayPlayerName"
+        />
+        <RoleplayStatusPanel
+          :session-id="session?.id"
+          :ai-name="displayAiName"
+          :player-name="displayPlayerName"
+        />
       </section>
 
       <section v-if="sessions.length" style="margin-top: 24px">

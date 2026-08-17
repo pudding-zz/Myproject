@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { api } from '../api/client.js'
 import {
   DEMO_HEALTH_RECORDS,
   summarizeHealth,
@@ -7,15 +8,56 @@ import {
 } from '../data/roleplayHealthDemo.js'
 
 const props = defineProps({
+  sessionId: { type: [Number, String], default: null },
   aiName: { type: String, default: '沈清野' },
   playerName: { type: String, default: '林念' },
 })
 
-const records = DEMO_HEALTH_RECORDS
-const summary = computed(() => summarizeHealth(records))
+const records = ref([])
+const fromApi = ref(false)
+const loadError = ref('')
 const selected = ref(null)
 const reportOpen = ref(false)
 const report = ref({ level: '', sub: '', tsukomi: '' })
+
+const summary = computed(() => summarizeHealth(records.value))
+
+const hint = computed(() => {
+  if (loadError.value) return `加载失败：${loadError.value}（已回退演示数据）`
+  if (fromApi.value) {
+    return records.value.length
+      ? '会话真实记录'
+      : '当前会话暂无生理记录（可用 PUT /health 写入）'
+  }
+  return '当前为演示数据；进入会话后将拉取真实记录。'
+})
+
+async function load() {
+  selected.value = null
+  loadError.value = ''
+  const id = props.sessionId != null && props.sessionId !== '' ? Number(props.sessionId) : null
+  if (!id) {
+    records.value = DEMO_HEALTH_RECORDS
+    fromApi.value = false
+    return
+  }
+  try {
+    const data = await api.getRoleplayHealth(id)
+    if (data?.available === false) {
+      records.value = DEMO_HEALTH_RECORDS
+      fromApi.value = false
+      return
+    }
+    records.value = Array.isArray(data?.records) ? data.records : []
+    fromApi.value = true
+  } catch (e) {
+    loadError.value = e.message || '请求失败'
+    records.value = DEMO_HEALTH_RECORDS
+    fromApi.value = false
+  }
+}
+
+watch(() => props.sessionId, load, { immediate: true })
 
 function selectDay(d) {
   selected.value = d
@@ -28,7 +70,7 @@ function openReport() {
 </script>
 
 <template>
-  <details class="health-panel" open>
+  <details class="health-panel">
     <summary>
       <div class="panel-summary-left">
         <span class="panel-title health-rose">生理记录</span>
@@ -37,7 +79,7 @@ function openReport() {
       <span class="panel-chevron health-rose">▾</span>
     </summary>
     <div class="panel-body">
-      <p class="demo-hint">当前为演示数据；后端落库后将改为会话真实记录。</p>
+      <p class="demo-hint">{{ hint }}</p>
       <div class="health-summary-grid">
         <div class="health-card">
           <p class="num">{{ summary.totalCount }}</p>
@@ -53,7 +95,7 @@ function openReport() {
         </div>
       </div>
 
-      <div class="health-card">
+      <div v-if="records.length" class="health-card">
         <div class="health-weekdays">
           <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
         </div>
@@ -75,6 +117,7 @@ function openReport() {
           </button>
         </div>
       </div>
+      <p v-else class="demo-hint">暂无日历数据</p>
 
       <div v-if="selected" class="health-card">
         <div style="display: flex; justify-content: space-between; align-items: center">

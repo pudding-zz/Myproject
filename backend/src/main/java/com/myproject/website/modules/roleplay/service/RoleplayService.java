@@ -5,20 +5,31 @@ import com.myproject.website.common.ErrorCode;
 import com.myproject.website.modules.ai.AiClient;
 import com.myproject.website.modules.ai.AiMessage;
 import com.myproject.website.modules.roleplay.dto.CreateRoleplaySessionRequest;
+import com.myproject.website.modules.roleplay.dto.RoleplayHealthRecordDto;
+import com.myproject.website.modules.roleplay.dto.RoleplayHealthResponse;
 import com.myproject.website.modules.roleplay.dto.RoleplayMessageResponse;
 import com.myproject.website.modules.roleplay.dto.RoleplaySessionResponse;
+import com.myproject.website.modules.roleplay.dto.UpdateRoleplayHealthRequest;
+import com.myproject.website.modules.roleplay.dto.UpdateRoleplayStatusRequest;
+import com.myproject.website.modules.roleplay.entity.RoleplayHealthRecordEntity;
 import com.myproject.website.modules.roleplay.entity.RoleplayMessageEntity;
 import com.myproject.website.modules.roleplay.entity.RoleplaySessionEntity;
+import com.myproject.website.modules.roleplay.entity.RoleplaySessionStatusEntity;
+import com.myproject.website.modules.roleplay.repository.RoleplayHealthRecordRepository;
 import com.myproject.website.modules.roleplay.repository.RoleplayMessageRepository;
 import com.myproject.website.modules.roleplay.repository.RoleplaySessionRepository;
+import com.myproject.website.modules.roleplay.repository.RoleplaySessionStatusRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +37,8 @@ public class RoleplayService {
 
     private final RoleplaySessionRepository sessionRepository;
     private final RoleplayMessageRepository messageRepository;
+    private final RoleplayHealthRecordRepository healthRecordRepository;
+    private final RoleplaySessionStatusRepository statusRepository;
     private final RoleplayPromptBuilder promptBuilder;
     private final AiClient aiClient;
 
@@ -61,6 +74,8 @@ public class RoleplayService {
         session.setScene(trimToNull(request.getScene()));
         sessionRepository.save(session);
 
+        seedEmptyStatus(session.getId());
+
         if (request.getOpeningLine() == null || Boolean.TRUE.equals(request.getOpeningLine())) {
             generateAssistantReply(session, promptBuilder.buildOpeningUserPrompt(session), false);
         }
@@ -88,9 +103,8 @@ public class RoleplayService {
         userMessage.setContent(content.trim());
         messageRepository.save(userMessage);
 
-        String reply = generateAssistantReply(
+        generateAssistantReply(
                 session, promptBuilder.buildChatUserPrompt(session, content.trim()), true);
-        // touch updatedAt
         sessionRepository.save(session);
 
         RoleplayMessageEntity last = messageRepository.findBySessionIdOrderByIdAsc(sessionId).stream()
@@ -102,29 +116,188 @@ public class RoleplayService {
         return RoleplayMessageResponse.from(last);
     }
 
-    /**
-     * 后续扩展占位：角色状态 / 生理记录 / 亲密记录尚未落库，先返回空结构。
-     */
     @Transactional(readOnly = true)
-    public Map<String, Object> getStatusPlaceholder(Long sessionId) {
+    public Map<String, Object> getStatus(Long sessionId) {
         requireSession(sessionId);
-        return Map.of(
-                "available", false,
-                "message", "角色状态将在后续版本接入",
-                "blocks", List.of());
+        RoleplaySessionStatusEntity status = statusRepository.findBySessionId(sessionId)
+                .orElse(null);
+        Map<String, Object> payload = status != null && status.getPayload() != null
+                ? status.getPayload()
+                : emptyStatusPayload();
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("available", true);
+        response.putAll(payload);
+        return response;
+    }
+
+    @Transactional
+    public Map<String, Object> updateStatus(Long sessionId, UpdateRoleplayStatusRequest request) {
+        requireSession(sessionId);
+        Map<String, Object> payload = toStatusPayload(request);
+        RoleplaySessionStatusEntity status = statusRepository.findBySessionId(sessionId)
+                .orElseGet(() -> {
+                    RoleplaySessionStatusEntity created = new RoleplaySessionStatusEntity();
+                    created.setSessionId(sessionId);
+                    return created;
+                });
+        status.setPayload(payload);
+        statusRepository.save(status);
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("available", true);
+        response.putAll(payload);
+        return response;
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> getHealthPlaceholder(Long sessionId) {
+    public RoleplayHealthResponse getHealth(Long sessionId) {
         requireSession(sessionId);
-        return Map.of(
-                "available", false,
-                "message", "生理/亲密记录将在后续版本接入",
-                "summary", Map.of(
-                        "totalCount", 0,
-                        "totalCal", 0,
-                        "avgHeart", 0),
-                "records", List.of());
+        List<RoleplayHealthRecordDto> records = healthRecordRepository
+                .findBySessionIdOrderByDayAsc(sessionId)
+                .stream()
+                .map(RoleplayHealthRecordDto::from)
+                .toList();
+        return RoleplayHealthResponse.builder()
+                .available(true)
+                .summary(summarize(records))
+                .records(records)
+                .build();
+    }
+
+    @Transactional
+    public RoleplayHealthResponse updateHealth(Long sessionId, UpdateRoleplayHealthRequest request) {
+        requireSession(sessionId);
+        List<RoleplayHealthRecordDto> incoming =
+                request.getRecords() == null ? List.of() : request.getRecords();
+
+        Set<Integer> seenDays = new HashSet<>();
+        for (RoleplayHealthRecordDto dto : incoming) {
+            if (dto.getDay() == null || dto.getDay() < 1 || dto.getDay() > 31) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "day 必须为 1–31");
+            }
+            if (!seenDays.add(dto.getDay())) {
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "records 中 day 不能重复: " + dto.getDay());
+            }
+        }
+
+        healthRecordRepository.deleteBySessionId(sessionId);
+        healthRecordRepository.flush();
+
+        List<RoleplayHealthRecordEntity> entities = new ArrayList<>();
+        for (RoleplayHealthRecordDto dto : incoming) {
+            RoleplayHealthRecordEntity entity = new RoleplayHealthRecordEntity();
+            entity.setSessionId(sessionId);
+            entity.setDay(dto.getDay());
+            entity.setCal(nullToZero(dto.getCal()));
+            entity.setHeart(nullToZero(dto.getHeart()));
+            entity.setCount(nullToZero(dto.getCount()));
+            entity.setDuration(nullToZero(dto.getDuration()));
+            entity.setTriggerText(dto.getTrigger());
+            entity.setScene(dto.getScene());
+            entity.setThought(dto.getThought());
+            entities.add(entity);
+        }
+        healthRecordRepository.saveAll(entities);
+
+        List<RoleplayHealthRecordDto> records = entities.stream()
+                .sorted((a, b) -> Integer.compare(a.getDay(), b.getDay()))
+                .map(RoleplayHealthRecordDto::from)
+                .toList();
+        return RoleplayHealthResponse.builder()
+                .available(true)
+                .summary(summarize(records))
+                .records(records)
+                .build();
+    }
+
+    private void seedEmptyStatus(Long sessionId) {
+        RoleplaySessionStatusEntity status = new RoleplaySessionStatusEntity();
+        status.setSessionId(sessionId);
+        status.setPayload(emptyStatusPayload());
+        statusRepository.save(status);
+    }
+
+    static Map<String, Object> emptyStatusPayload() {
+        Map<String, Object> theater = new LinkedHashMap<>();
+        theater.put("content", "");
+        theater.put("os", "");
+
+        Map<String, Object> access = new LinkedHashMap<>();
+        access.put("lines", List.of());
+        access.put("os", "");
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("blocks", List.of());
+        payload.put("intimacy", List.of());
+        payload.put("life", List.of());
+        payload.put("favorability", List.of());
+        payload.put("favorOs", "");
+        payload.put("forum", List.of());
+        payload.put("theater", theater);
+        payload.put("misc", List.of());
+        payload.put("access", access);
+        return payload;
+    }
+
+    private static Map<String, Object> toStatusPayload(UpdateRoleplayStatusRequest request) {
+        Map<String, Object> payload = emptyStatusPayload();
+        if (request == null) {
+            return payload;
+        }
+        if (request.getBlocks() != null) {
+            payload.put("blocks", request.getBlocks());
+        }
+        if (request.getIntimacy() != null) {
+            payload.put("intimacy", request.getIntimacy());
+        }
+        if (request.getLife() != null) {
+            payload.put("life", request.getLife());
+        }
+        if (request.getFavorability() != null) {
+            payload.put("favorability", request.getFavorability());
+        }
+        if (request.getFavorOs() != null) {
+            payload.put("favorOs", request.getFavorOs());
+        }
+        if (request.getForum() != null) {
+            payload.put("forum", request.getForum());
+        }
+        if (request.getTheater() != null) {
+            payload.put("theater", request.getTheater());
+        }
+        if (request.getMisc() != null) {
+            payload.put("misc", request.getMisc());
+        }
+        if (request.getAccess() != null) {
+            payload.put("access", request.getAccess());
+        }
+        return payload;
+    }
+
+    private static Map<String, Integer> summarize(List<RoleplayHealthRecordDto> records) {
+        int totalCount = 0;
+        int totalCal = 0;
+        int heartSum = 0;
+        int heartDays = 0;
+        for (RoleplayHealthRecordDto r : records) {
+            int count = nullToZero(r.getCount());
+            totalCount += count;
+            totalCal += nullToZero(r.getCal());
+            if (count > 0) {
+                heartSum += nullToZero(r.getHeart());
+                heartDays++;
+            }
+        }
+        int avgHeart = heartDays == 0 ? 0 : Math.round((float) heartSum / heartDays);
+        Map<String, Integer> summary = new LinkedHashMap<>();
+        summary.put("totalCount", totalCount);
+        summary.put("totalCal", totalCal);
+        summary.put("avgHeart", avgHeart);
+        return summary;
+    }
+
+    private static int nullToZero(Integer value) {
+        return value == null ? 0 : value;
     }
 
     private String generateAssistantReply(

@@ -66,5 +66,15 @@ export const api = {
       body: JSON.stringify({ content }),
     }),
   getRoleplayStatus: (id) => request(`/roleplay/sessions/${id}/status`),
+  putRoleplayStatus: (id, body) =>
+    request(`/roleplay/sessions/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
   getRoleplayHealth: (id) => request(`/roleplay/sessions/${id}/health`),
+  putRoleplayHealth: (id, body) =>
+    request(`/roleplay/sessions/${id}/health`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
 }
