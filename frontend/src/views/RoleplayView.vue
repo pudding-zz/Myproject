@@ -2,6 +2,9 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api/client.js'
+import RoleplayHealthPanel from '../components/RoleplayHealthPanel.vue'
+import RoleplayStatusPanel from '../components/RoleplayStatusPanel.vue'
+import '../styles/roleplay-panels.css'
 
 const router = useRouter()
 const route = useRoute()
@@ -29,11 +32,11 @@ const form = reactive({
   scene: '医院值班室门口，夜班灯管嗡嗡作响。',
 })
 
-const aiInitial = computed(() => (session.value?.aiName || form.aiName || 'AI').slice(0, 1))
-const playerInitial = computed(() => (session.value?.playerName || form.playerName || '我').slice(0, 1))
-const placeholder = computed(
-  () => `以「${session.value?.playerName || form.playerName}」的身份回复…`,
-)
+const displayAiName = computed(() => session.value?.aiName || form.aiName || '沈清野')
+const displayPlayerName = computed(() => session.value?.playerName || form.playerName || '林念')
+const aiInitial = computed(() => displayAiName.value.slice(0, 1))
+const playerInitial = computed(() => displayPlayerName.value.slice(0, 1))
+const placeholder = computed(() => `以「${displayPlayerName.value}」的身份回复…`)
 
 onMounted(async () => {
   await refreshSessionList()
@@ -262,25 +265,9 @@ function onKeydown(e) {
         </div>
       </section>
 
-      <section class="demo-grid-2" style="margin-top: 20px">
-        <details class="demo-card">
-          <summary style="cursor: pointer; font-weight: 600; color: #9a4b5c">
-            生理记录 · 即将开放
-          </summary>
-          <p class="demo-muted" style="margin-top: 10px">
-            日历式亲密/生理追踪将在后续版本接入。接口预留
-            <code>GET /api/roleplay/sessions/{id}/health</code>。
-          </p>
-        </details>
-        <details class="demo-card">
-          <summary style="cursor: pointer; font-weight: 600; color: #8a6d4b">
-            角色状态 · 即将开放
-          </summary>
-          <p class="demo-muted" style="margin-top: 10px">
-            房子、宠物、亲属、伴侣、好感度等将随对话更新。接口预留
-            <code>GET /api/roleplay/sessions/{id}/status</code>。
-          </p>
-        </details>
+      <section class="rp-panels" aria-label="生理记录与角色状态">
+        <RoleplayHealthPanel :ai-name="displayAiName" :player-name="displayPlayerName" />
+        <RoleplayStatusPanel :ai-name="displayAiName" :player-name="displayPlayerName" />
       </section>
 
       <section v-if="sessions.length" style="margin-top: 24px">
