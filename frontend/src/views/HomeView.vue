@@ -99,6 +99,14 @@ async function createManual() {
 
     <div class="panel home">
       <div class="block">
+        <h2>玩法入口</h2>
+        <p class="muted">穿书仍用下方底本；角色扮演可单独设定 AI 与玩家身份后开聊。</p>
+        <div class="form-actions">
+          <button type="button" @click="router.push('/roleplay')">进入 AI 角色对话</button>
+        </div>
+      </div>
+
+      <div class="block">
         <h2>已有剧情底本</h2>
         <ul v-if="storyBases.length" class="base-list">
           <li v-for="b in storyBases" :key="b.id">

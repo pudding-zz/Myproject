@@ -54,4 +54,17 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ content: content || '（推进剧情）' }),
     }),
+
+  listRoleplaySessions: () => request('/roleplay/sessions'),
+  createRoleplaySession: (body) =>
+    request('/roleplay/sessions', { method: 'POST', body: JSON.stringify(body) }),
+  getRoleplaySession: (id) => request(`/roleplay/sessions/${id}`),
+  listRoleplayMessages: (id) => request(`/roleplay/sessions/${id}/messages`),
+  sendRoleplayMessage: (id, content) =>
+    request(`/roleplay/sessions/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    }),
+  getRoleplayStatus: (id) => request(`/roleplay/sessions/${id}/status`),
+  getRoleplayHealth: (id) => request(`/roleplay/sessions/${id}/health`),
 }
