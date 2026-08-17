@@ -1,0 +1,247 @@
+/* 穿书游玩：左右布局，对齐 demo play 工作台 */
+.play-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 20px 40px;
+}
+
+.play-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.play-head h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.play-workspace {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 0;
+  min-height: 70vh;
+  background: var(--demo-card);
+  border: 1px solid var(--demo-border);
+  border-radius: var(--demo-radius-lg);
+  overflow: hidden;
+}
+
+@media (max-width: 860px) {
+  .play-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+.play-aside {
+  border-right: 1px solid var(--demo-border);
+  background: var(--demo-card);
+  padding: 14px;
+  overflow: auto;
+  max-height: 78vh;
+}
+
+.play-aside-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--demo-muted);
+  margin: 0 0 10px;
+}
+
+.play-char {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 12px;
+  padding: 10px;
+  cursor: pointer;
+  color: inherit;
+  margin-bottom: 6px;
+}
+
+.play-char:hover {
+  background: var(--demo-secondary);
+}
+
+.play-char.active {
+  background: var(--demo-secondary);
+  border-color: var(--demo-border);
+}
+
+.play-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--demo-brand);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.play-avatar.muted {
+  background: var(--demo-secondary);
+  color: var(--demo-text);
+}
+
+.play-char .name {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.play-char .sub {
+  font-size: 0.75rem;
+  color: var(--demo-muted);
+}
+
+.play-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 70vh;
+  background: #fafafa;
+}
+
+.play-chat-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--demo-border);
+  background: var(--demo-card);
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.play-chat-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.play-chat-head p {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--demo-muted);
+}
+
+.play-messages {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.play-bubble-row {
+  display: flex;
+  max-width: 85%;
+}
+
+.play-bubble-row.user {
+  align-self: flex-end;
+}
+
+.play-bubble-row.assistant {
+  align-self: flex-start;
+}
+
+.play-bubble {
+  border-radius: 16px;
+  padding: 10px 14px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.play-bubble-row.user .play-bubble {
+  background: var(--demo-brand-soft);
+  border: 1px solid #c5ddd2;
+  border-top-right-radius: 4px;
+}
+
+.play-bubble-row.assistant .play-bubble {
+  background: var(--demo-card);
+  border: 1px solid var(--demo-border);
+  border-top-left-radius: 4px;
+}
+
+.play-note {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: var(--demo-muted);
+}
+
+.play-composer {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--demo-border);
+  background: var(--demo-card);
+}
+
+.play-composer textarea {
+  flex: 1;
+  border: 1px solid var(--demo-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  resize: none;
+  min-height: 52px;
+}
+
+.play-panel {
+  padding: 16px;
+}
+
+.play-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 16px;
+}
+
+.play-chip {
+  border: 1px solid var(--demo-border);
+  background: var(--demo-card);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.play-chip.on {
+  background: var(--demo-brand-soft);
+  border-color: #b7d0c5;
+  color: var(--demo-brand);
+  font-weight: 600;
+}
+
+.play-world {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--demo-secondary);
+  font-size: 0.85rem;
+}
+
+.play-world strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.play-side-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 14px 0;
+}

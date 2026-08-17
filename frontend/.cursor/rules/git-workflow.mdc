@@ -1,0 +1,40 @@
+---
+description: Git 分支职责、命名与合并流程（来自分支管理规范）
+alwaysApply: true
+---
+
+# Git 分支与协作规范
+
+## 当前基线
+
+- 日常开发从最新 `develop` 拉取后开分支读写；**禁止**直接在 `master` / `develop` 上改代码并提交。
+- Agent 写代码前先确认当前分支：应为 `feature-YYYYMMDD-*` 或 `hotfix-YYYYMMDD-*`。若在 `main`/`master`/`develop`，先提醒用户切到规范分支再改。
+
+## 核心分支
+
+| 分支 | 作用 | 限制 |
+|------|------|------|
+| `master`（或仓库的 `main`） | 现场/发布基准 | 禁止直接提交；仅核心维护者合并 |
+| `develop` | 集成自测完成的功能，作为集成测试与发版候选 | 开发可合并已自测 feature；禁止直接改代码 |
+
+## 命名（强制）
+
+- 功能：`feature-YYYYMMDD-功能名称`  
+  例：`feature-20260806-穿书剧情底本`
+- 热修：`hotfix-YYYYMMDD-问题名称`  
+  例：`hotfix-20260806-取纲超时`
+- 正式标签：`v主.次.修订`（例：`v1.2.0`）
+- 热修标签：`v主.次.修订-hotfix-序号`（例：`v1.2.0-hotfix-1`）
+
+## 流程底线
+
+1. 从最新 `develop` 建 `feature-*` → 开发并自测 → 再合并回 `develop`。
+2. 集成测试问题在**原 feature** 修，禁止直接改 `develop`。
+3. 发版：`develop` 冻结 → 合入 `master`/`main` → 打正式 Tag。
+4. 生产问题：从现场 Tag 拉 `hotfix-*` → 修完打热修 Tag → 合入 `master` **且** 合入 `develop` → 删 hotfix。
+5. 职责结束的 feature/hotfix 及时删除；发版与热修必须打标签并备注可追溯。
+
+## Commit
+
+- 使用 conventional commits：`feat` / `fix` / `chore` / `docs` / `refactor` / `test`。
+- 未让用户明确要求时，不要擅自 commit / push。

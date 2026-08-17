@@ -1,0 +1,27 @@
+---
+description: 前端 Vue 协作约定与产品用语（望月）
+globs: frontend/**/*.{vue,js,css}
+alwaysApply: false
+---
+
+# 前端开发约定
+
+## 技术栈
+
+- Vue 3 + Vite；本地通过 Vite 代理访问 `/api` → `http://localhost:8080`。
+- 后端 `context-path` 已是 `/api`，前端请求路径形如 `/api/story-bases`。
+
+## 产品用语（强制）
+
+- 使用：剧情底本、原著节点、当前世界、偏离记录。
+- 禁止对用户展示「小说圣经」。
+
+## 风格与结构
+
+- 主题切换：右上角月相按钮（青瓷 / 夜航 / 纸间），勿改回顶部大 Tab。
+- API 调用集中在 `frontend/src/api/`，组件内勿散落裸 `fetch` 拼装业务 URL。
+- 修改保持最小范围；不顺手大重构、不擅自加路由库除非任务要求。
+
+## 与分支规范
+
+- 前端改动同样在 `feature-YYYYMMDD-*` 上完成，自测后再合入 `develop`。

@@ -1,0 +1,36 @@
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Java / Maven
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+**/application-local.yml
+**/application-local.properties
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Logs
+*.log
+logs/
