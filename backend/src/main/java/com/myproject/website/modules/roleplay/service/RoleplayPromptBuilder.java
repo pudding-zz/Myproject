@@ -65,4 +65,43 @@ public class RoleplayPromptBuilder {
                 请只以「%s」回应。
                 """.formatted(session.getPlayerName(), playerLine, session.getAiName());
     }
+
+    /** 状态结算器：只输出 JSON，不扮演角色。 */
+    public String buildStatusSettleSystemPrompt() {
+        return """
+                你是「角色状态结算器」，不是对话角色。
+                根据最近对话与当前状态快照，输出一个 JSON 对象，用于更新角色状态面板。
+                硬性规则：
+                1. 只输出一个 JSON 对象，不要 Markdown 代码块，不要解释文字；
+                2. 未在对话中出现的内容不要编造；没有变化时 changed=false，status 可省略或为空对象；
+                3. status 里只填写需要更新的键（可缺省）：blocks, intimacy, life, favorability, favorOs, forum, theater, misc, access；
+                4. life 项结构：{"title":"进食|睡眠|礼物|约定","lines":["..."],"os":"..."}；若更新 life，请给出完整四块或至少给出有变化的块（后端会按 title 合并）；
+                5. healthPatch 可选：{"day":1-31,"cal":0,"heart":0,"count":0,"duration":0,"trigger":"","scene":"","thought":""}，仅当对话明确涉及亲密/生理事件时填写；
+                6. note 用一句中文说明本次整理了什么（给用户看）。
+                JSON 形状示例：
+                {"changed":true,"note":"根据对话更新了约定","status":{"life":[{"title":"约定","lines":["周末去旧书店"],"os":"他主动提的"}]},"healthPatch":null}
+                """;
+    }
+
+    public String buildStatusSettleUserPrompt(
+            RoleplaySessionEntity session, String currentStatusJson, String transcript) {
+        return """
+                AI角色：%s
+                玩家角色：%s
+                场景：%s
+
+                【当前状态 JSON】
+                %s
+
+                【最近对话】
+                %s
+
+                请输出结算 JSON。
+                """.formatted(
+                session.getAiName(),
+                session.getPlayerName(),
+                StringUtils.hasText(session.getScene()) ? session.getScene() : "（未设定）",
+                currentStatusJson,
+                StringUtils.hasText(transcript) ? transcript : "（暂无对话）");
+    }
 }

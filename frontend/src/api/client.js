@@ -71,10 +71,14 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+  refreshRoleplayStatus: (id) =>
+    request(`/roleplay/sessions/${id}/status/refresh`, { method: 'POST', body: '{}' }),
   getRoleplayHealth: (id) => request(`/roleplay/sessions/${id}/health`),
   putRoleplayHealth: (id, body) =>
     request(`/roleplay/sessions/${id}/health`, {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
+  deleteRoleplaySession: (id) =>
+    request(`/roleplay/sessions/${id}`, { method: 'DELETE' }),
 }

@@ -11,6 +11,7 @@ import com.myproject.website.modules.roleplay.dto.UpdateRoleplayStatusRequest;
 import com.myproject.website.modules.roleplay.service.RoleplayService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,6 +46,12 @@ public class RoleplayController {
         return ApiResponse.ok(roleplayService.getSession(id));
     }
 
+    @DeleteMapping("/sessions/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        roleplayService.deleteSession(id);
+        return ApiResponse.ok();
+    }
+
     @GetMapping("/sessions/{id}/messages")
     public ApiResponse<List<RoleplayMessageResponse>> messages(@PathVariable Long id) {
         return ApiResponse.ok(roleplayService.listMessages(id));
@@ -67,6 +74,12 @@ public class RoleplayController {
             @PathVariable Long id,
             @RequestBody UpdateRoleplayStatusRequest request) {
         return ApiResponse.ok(roleplayService.updateStatus(id, request));
+    }
+
+    /** 根据最近对话整理并写入状态（对用户表现为「刷新当前状态」） */
+    @PostMapping("/sessions/{id}/status/refresh")
+    public ApiResponse<Map<String, Object>> refreshStatus(@PathVariable Long id) {
+        return ApiResponse.ok(roleplayService.refreshStatus(id));
     }
 
     @GetMapping("/sessions/{id}/health")

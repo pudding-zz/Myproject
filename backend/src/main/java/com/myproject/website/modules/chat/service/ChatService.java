@@ -2,7 +2,9 @@ package com.myproject.website.modules.chat.service;
 
 import com.myproject.website.common.BusinessException;
 import com.myproject.website.common.ErrorCode;
+import com.myproject.website.config.AiProperties;
 import com.myproject.website.modules.ai.AiClient;
+import com.myproject.website.modules.ai.AiHistoryWindow;
 import com.myproject.website.modules.ai.AiMessage;
 import com.myproject.website.modules.character.entity.CharacterEntity;
 import com.myproject.website.modules.character.service.CharacterService;
@@ -38,6 +40,7 @@ public class ChatService {
     private final StoryService storyService;
     private final StoryPromptBuilder storyPromptBuilder;
     private final AiClient aiClient;
+    private final AiProperties aiProperties;
 
     @Transactional
     public CreateChatResponse create(CreateChatRequest request) {
@@ -102,7 +105,10 @@ public class ChatService {
 
         List<AiMessage> prompt = new ArrayList<>();
         prompt.add(AiMessage.system(system));
-        chatMessageRepository.findByChatIdOrderByIdAsc(chatId).forEach(msg -> {
+        List<ChatMessageEntity> history = AiHistoryWindow.recent(
+                chatMessageRepository.findByChatIdOrderByIdAsc(chatId),
+                aiProperties.getHistoryMaxMessages());
+        history.forEach(msg -> {
             if ("user".equals(msg.getRole()) && msg.getId().equals(userMessage.getId())) {
                 if (advance) {
                     prompt.add(AiMessage.user(

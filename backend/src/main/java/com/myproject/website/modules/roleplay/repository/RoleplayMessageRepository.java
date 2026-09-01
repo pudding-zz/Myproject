@@ -8,4 +8,6 @@ import java.util.List;
 public interface RoleplayMessageRepository extends JpaRepository<RoleplayMessageEntity, Long> {
 
     List<RoleplayMessageEntity> findBySessionIdOrderByIdAsc(Long sessionId);
+
+    void deleteBySessionId(Long sessionId);
 }

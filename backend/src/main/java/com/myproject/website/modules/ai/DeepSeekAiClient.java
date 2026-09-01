@@ -7,7 +7,6 @@ import com.myproject.website.config.DeepSeekProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
@@ -15,8 +14,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 由 {@link com.myproject.website.config.AiClientConfig} 按需创建，勿再加 {@code @Component}，
+ * 避免与 Mock 双 Bean 冲突。
+ */
 @Slf4j
-@Component
 @RequiredArgsConstructor
 public class DeepSeekAiClient implements AiClient {
 

@@ -11,12 +11,15 @@ const route = useRoute()
 
 const loading = ref(false)
 const sending = ref(false)
+const refreshingStatus = ref(false)
 const error = ref('')
+const statusNote = ref('')
 const session = ref(null)
 const messages = ref([])
 const sessions = ref([])
 const draft = ref('')
 const chatLog = ref(null)
+const panelReloadKey = ref(0)
 
 const form = reactive({
   aiName: '沈清野',
@@ -129,7 +132,41 @@ function resetToNew() {
   messages.value = []
   draft.value = ''
   error.value = ''
+  statusNote.value = ''
   router.replace('/roleplay')
+}
+
+async function refreshCurrentStatus() {
+  if (!session.value || refreshingStatus.value) return
+  refreshingStatus.value = true
+  error.value = ''
+  statusNote.value = ''
+  try {
+    const data = await api.refreshRoleplayStatus(session.value.id)
+    statusNote.value = data?.note || (data?.changed ? '状态已更新' : '暂无变化')
+    panelReloadKey.value += 1
+  } catch (e) {
+    error.value = e.message || '整理状态失败'
+  } finally {
+    refreshingStatus.value = false
+  }
+}
+
+async function removeSession() {
+  if (!session.value) return
+  if (!window.confirm('确定删除当前会话？消息与状态记录将一并清除。')) return
+  error.value = ''
+  loading.value = true
+  try {
+    const id = session.value.id
+    await api.deleteRoleplaySession(id)
+    await refreshSessionList()
+    resetToNew()
+  } catch (e) {
+    error.value = e.message || '删除失败'
+  } finally {
+    loading.value = false
+  }
 }
 
 async function send() {
@@ -174,6 +211,7 @@ function onKeydown(e) {
       </header>
 
       <p v-if="error" class="demo-banner error">{{ error }}</p>
+      <p v-if="statusNote" class="demo-banner">{{ statusNote }}</p>
 
       <section class="demo-grid-2">
         <article class="demo-card">
@@ -233,7 +271,11 @@ function onKeydown(e) {
           {{ loading ? '创建中…' : '开始以设定身份对话' }}
         </button>
         <template v-else>
+          <button class="demo-btn primary" type="button" :disabled="refreshingStatus" @click="refreshCurrentStatus">
+            {{ refreshingStatus ? '整理中…' : '刷新当前状态' }}
+          </button>
           <button class="demo-btn" type="button" @click="resetToNew">新建会话</button>
+          <button class="demo-btn" type="button" :disabled="loading" @click="removeSession">删除会话</button>
           <span class="demo-muted">当前：{{ session.title || `${session.aiName} × ${session.playerName}` }}</span>
         </template>
       </div>
@@ -267,11 +309,13 @@ function onKeydown(e) {
 
       <section class="rp-panels" aria-label="生理记录与角色状态">
         <RoleplayHealthPanel
+          :key="'h-' + (session?.id || 'x') + '-' + panelReloadKey"
           :session-id="session?.id"
           :ai-name="displayAiName"
           :player-name="displayPlayerName"
         />
         <RoleplayStatusPanel
+          :key="'s-' + (session?.id || 'x') + '-' + panelReloadKey"
           :session-id="session?.id"
           :ai-name="displayAiName"
           :player-name="displayPlayerName"
